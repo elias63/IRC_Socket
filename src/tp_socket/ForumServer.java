@@ -64,6 +64,8 @@ class ForumServer {
             }
         }
 
+        /// CHECKER SI LE MESSAGE EST VIDE OU PAS
+        
         /**
          * Send a message to a specific user
          * @param mess 
@@ -87,6 +89,9 @@ class ForumServer {
             send(recipient + " n\'existe pas ...");
         }
 
+        /**
+         * This methods displays all connected users
+         */
         public void displayAllConnected() {
             StringBuilder sb = new StringBuilder();
             sb.append("\n----- Users currently connected -----\n\n");
@@ -100,7 +105,11 @@ class ForumServer {
                 send(sb.toString());
             }
         }
-
+        
+        /**
+         * This methods allows to disconnect a client 
+         * @param name 
+         */
         public void deleteChatManager(String name) {
             StringBuilder sb = new StringBuilder();
             synchronized (clients) {
@@ -113,7 +122,6 @@ class ForumServer {
                 }
             }
         }
-
         
         /**
          * Display help for user
