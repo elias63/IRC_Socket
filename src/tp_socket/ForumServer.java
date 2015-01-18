@@ -64,29 +64,32 @@ class ForumServer {
             }
         }
 
-        /// CHECKER SI LE MESSAGE EST VIDE OU PAS
-        
         /**
          * Send a message to a specific user
-         * @param mess 
+         *
+         * @param mess
          */
         public void sendTo(String mess) {	// Send the given message to all the connected users
 
-            String arr[] = mess.trim().split(" ", 2);
-            String recipient = arr[0];
-            String message = arr[1];
+            try {
+                String arr[] = mess.trim().split(" ", 2);
+                String recipient = arr[0];
+                String message = arr[1];
 
-            synchronized (clients) {
-                for (int i = 0; i < clients.size(); i++) {
-                    ChatManager gct = (ChatManager) clients.get(i);
-                    if (gct != null && gct.clientName.equals(recipient)) {
-                        gct.send(clientName + "> " + message);
-                        send(clientName + "> " + message);
-                        return;
+                synchronized (clients) {
+                    for (int i = 0; i < clients.size(); i++) {
+                        ChatManager gct = (ChatManager) clients.get(i);
+                        if (gct != null && gct.clientName.equals(recipient)) {
+                            gct.send(clientName + "> " + message);
+                            send(clientName + "> " + message);
+                            return;
+                        }
                     }
                 }
+                send(recipient + " n\'existe pas ...");
+            } catch (ArrayIndexOutOfBoundsException e) {
+                send("You cannot send an empty message");
             }
-            send(recipient + " n\'existe pas ...");
         }
 
         /**
@@ -96,7 +99,7 @@ class ForumServer {
             StringBuilder sb = new StringBuilder();
             sb.append("\n----- Users currently connected -----\n\n");
             synchronized (clients) {
-                for(int i = 0; i < clients.size(); i++) {
+                for (int i = 0; i < clients.size(); i++) {
                     ChatManager gct = (ChatManager) clients.get(i);
                     if (gct != null) {
                         sb.append(gct.clientName).append("\n");
@@ -105,24 +108,25 @@ class ForumServer {
                 send(sb.toString());
             }
         }
-        
+
         /**
-         * This methods allows to disconnect a client 
-         * @param name 
+         * This methods allows to disconnect a client
+         *
+         * @param name
          */
         public void deleteChatManager(String name) {
             StringBuilder sb = new StringBuilder();
             synchronized (clients) {
-                for(int i = 0; i < clients.size(); i++) {
+                for (int i = 0; i < clients.size(); i++) {
                     ChatManager gct = (ChatManager) clients.get(i);
-                    if(gct.clientName.equals(name)){
+                    if (gct.clientName.equals(name)) {
                         broadcast("All> " + clientName + " left the chat room");
                         clients.remove(i);
                     }
                 }
             }
         }
-        
+
         /**
          * Display help for user
          */
@@ -139,7 +143,8 @@ class ForumServer {
 
         /**
          * GETTER Client Name
-         * @return 
+         *
+         * @return
          */
         public String getClientName() {
             return clientName;
@@ -147,7 +152,8 @@ class ForumServer {
 
         /**
          * SETTER Client name
-         * @param clientName 
+         *
+         * @param clientName
          */
         public void setClientName(String clientName) {
             this.clientName = clientName;
@@ -155,11 +161,12 @@ class ForumServer {
 
         /**
          * This method checks if login already exists
+         *
          * @param map : list of username + number of occurs
          * @param st : current login
          */
         public void checkIfLoginExists(Map<String, Integer> map, String st) {
-            String newLogin;
+            String newLogin, oldName = clientName;
             String currentLogin = st.substring(2).trim();
             if (currentLogin.length() < 2) {
                 currentLogin = "unknown";
@@ -169,17 +176,21 @@ class ForumServer {
             if (map.containsKey(currentLogin)) {
                 newLogin = currentLogin.concat(Integer.toString(count + 1));
                 map.put(newLogin, 1);
-                send("> Welcome " + newLogin);
+                if (this.getClientName() != null) {
+                    broadcast("All> " + oldName + " become " + newLogin);
+                    map.remove(oldName);
+                }
                 this.setClientName(newLogin);
             } else {
-                send("> Welcome " + currentLogin);
+                if (this.getClientName() != null) {
+                    broadcast("All> " + oldName + " become " + currentLogin);
+                    map.remove(oldName);
+                }
                 this.setClientName(currentLogin);
             }
             map.put(currentLogin, count + 1);
-        }
-
-        public void deletePseudo(String name) {
-            map.remove(name);
+            send("> Welcome " + this.getClientName());
+            broadcast("All> " + this.getClientName() + " joined the chat room");
         }
 
         public void run() {						// Regular activity (as a thread): treat the command received from the client
@@ -189,10 +200,9 @@ class ForumServer {
                     switch (st.charAt(0)) {
                         case '?':
                             checkIfLoginExists(map, st);
-                            send(clientName + " > te voilà parmi nous");
                             break;
                         case '!':
-                            broadcast("All> " + st.substring(2));
+                            broadcast(clientName + "> " + st.substring(2));
                             break;
                         case '@':
                             sendTo(st.substring(2));
@@ -206,11 +216,9 @@ class ForumServer {
                         case '+':
                             send("Goodbye ! Take care buddy");
                             deleteChatManager(clientName);
-                            //send("Goodbye ! Take care buddy");
                             break;
-
                         default:
-                            send("> I don't understand '" + st + "'");
+                            send("> I don't understand '" + st + "'. \nIf you need you some help, enter '&'.");
                     }
                 }
             } catch (IOException e) {
@@ -248,7 +256,11 @@ class ForumServer {
                 synchronized (clients) {
                     clients.add(user);
                     user.start();
-                    user.send(userName + ": client " + clients.size() + " on line");
+                    if (clients.size() > 1) {
+                        user.send(userName + ": client \n\nThere are " + clients.size() + " users online\n");
+                    } else {
+                        user.send(userName + ": client \n\nThere is " + clients.size() + " user online\n");
+                    }
                 }
             }
         } catch (IOException e) {
